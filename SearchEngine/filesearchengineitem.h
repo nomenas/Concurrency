@@ -9,7 +9,7 @@ class FileSearchEngineItem
 public:
     FileSearchEngineItem(const QString& filepath, const QString& text, int options)
         : m_filepath(filepath), m_text(text), m_options(options) {}
-    ~FileSearchEngineItem() = default;
+    virtual ~FileSearchEngineItem() = default;
 
     QString filepath() const
     {
@@ -27,7 +27,7 @@ public:
     }
 
     virtual bool open() = 0;
-    virtual bool findNext() const = 0;
+    virtual bool findNext() = 0;
     virtual void close() = 0;
     virtual QVariant result() const = 0;
 

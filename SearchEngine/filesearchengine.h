@@ -14,7 +14,6 @@ class FileSearchEngine : public QObject
 
 public:
     using ItemFactory = std::function<FileSearchEngineItem*(const QString& filepath, const QString& text, int options)>;
-    using Results = QList<QList<QVariant> >;
 
     explicit FileSearchEngine(const QString& path, const QStringList& nameFilters, ItemFactory itemFactory);
     ~FileSearchEngine();
@@ -24,10 +23,14 @@ public:
     void cancel(int msecs = 10000);
     bool isCanceled() const;
 
-    Results results() const;
+signals:
+    void matchFileFound(const QString& filepath);
+    void fileSearchItemFound(const QString& filepath, const QVariant& result);
+    void searchDone();
 
 private slots:
     void taskDone(QRunnable* task);
+    void taskProgress(QRunnable* task, int code, QVariant arg);
 
 private:
     void startTask(QRunnable* task);
@@ -39,7 +42,6 @@ private:
     int m_options = 0;
     bool m_bIsCanceled = false;
     ItemFactory m_itemFactory;
-    Results m_results;
 };
 
 #endif // FILESEARCHENGINE_H

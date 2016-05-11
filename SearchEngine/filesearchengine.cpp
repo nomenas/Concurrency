@@ -7,7 +7,9 @@
 #include <QElapsedTimer>
 #include <QPointer>
 #include <QCoreApplication>
-#include <QDebug>
+
+static const int MatchFileFoundID = 0;
+static const int FileSearchItemFoundID = 1;
 
 class FindFilesTask : public QRunnable
 {
@@ -37,7 +39,9 @@ public:
         QDir currentDir(path);
         for (auto item : currentDir.entryList(m_nameFilter, QDir::Files))
         {
-            m_result << currentDir.filePath(item);
+            QString filepath = currentDir.filePath(item);
+            QMetaObject::invokeMethod(m_engine, "taskProgress",
+                Q_ARG(QRunnable*, this), Q_ARG(int, MatchFileFoundID), Q_ARG(QVariant, filepath));
         }
 
         for (auto item : currentDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot))
@@ -46,15 +50,9 @@ public:
         }
     }
 
-    QStringList result() const
-    {
-        return m_result;
-    }
-
 private:
     QString m_path;
     QPointer<FileSearchEngine> m_engine;
-    QStringList m_result;
     QStringList m_nameFilter;
 };
 
@@ -68,23 +66,39 @@ public:
         setAutoDelete(false);
     }
 
+    ~SearchFileTask()
+    {
+        if (m_pItem)
+        {
+            delete m_pItem;
+            m_pItem = nullptr;
+        }
+    }
+
     void run() override
     {
-        if (m_engine && m_engine->isCanceled()) return;
-
-        if (m_pItem && m_pItem->open())
-        {
-            while (m_pItem->findNext())
-            {
-                if (m_engine && m_engine->isCanceled()) break;
-                m_results << m_pItem->result();
-            }
-            m_pItem->close();
-        }
-
         if (m_engine)
         {
-            QMetaObject::invokeMethod(m_engine, "taskDone", Q_ARG(QRunnable*, this));
+            if (m_engine->isCanceled())
+            {
+                QMetaObject::invokeMethod(m_engine, "taskDone", Q_ARG(QRunnable*, this));
+            }
+            else if (m_pItem && m_pItem->open())
+            {
+                while (m_pItem->findNext())
+                {
+                    if (m_engine && m_engine->isCanceled()) break;
+                    QMetaObject::invokeMethod(m_engine, "taskProgress",
+                        Q_ARG(QRunnable*, this), Q_ARG(int, FileSearchItemFoundID), Q_ARG(QVariant, m_pItem->result()));
+                }
+
+                m_pItem->close();
+
+                if (m_engine)
+                {
+                    QMetaObject::invokeMethod(m_engine, "taskDone", Q_ARG(QRunnable*, this));
+                }
+            }
         }
     }
 
@@ -93,15 +107,9 @@ public:
         return m_pItem;
     }
 
-    QList<QVariant> results() const
-    {
-        return m_results;
-    }
-
 private:
-    QList<QVariant> m_results;
     QPointer<FileSearchEngine> m_engine;
-    FileSearchEngineItem* m_pItem;
+    FileSearchEngineItem* m_pItem = nullptr;
 };
 
 FileSearchEngine::FileSearchEngine(const QString& path, const QStringList& nameFilters, ItemFactory itemFactory)
@@ -132,23 +140,34 @@ void FileSearchEngine::find(const QString& text, int options /*= 0*/)
 
 void FileSearchEngine::taskDone(QRunnable* task)
 {
-    if (!isCanceled())
-    {
-        if (FindFilesTask* item = dynamic_cast<FindFilesTask*>(task))
-        {
-            for (auto filepath : item->result())
-            {
-                startTask(new SearchFileTask(this, m_itemFactory(filepath, m_text, m_options)));
-            }
-        }
-        else if (SearchFileTask* item = dynamic_cast<SearchFileTask*>(task))
-        {
-            m_results << item->results();
-        }
-    }
-
     --m_activeTasks;
     delete task;
+
+    if (m_activeTasks == 0)
+    {
+        emit searchDone();
+    }
+}
+
+void FileSearchEngine::taskProgress(QRunnable *task, int code, QVariant arg)
+{
+    if (!isCanceled())
+    {
+        if (code == MatchFileFoundID)
+        {
+            QString filename = arg.toString();
+            startTask(new SearchFileTask(this, m_itemFactory(filename, m_text, m_options)));
+            emit matchFileFound(filename);
+        }
+        else if (code == FileSearchItemFoundID)
+        {
+            SearchFileTask* searchTask = dynamic_cast<SearchFileTask*>(task);
+            if (searchTask && searchTask->item())
+            {
+                emit fileSearchItemFound(searchTask->item()->filepath(), arg);
+            }
+        }
+    }
 }
 
 void FileSearchEngine::cancel(int msecs /*= -1*/)
@@ -166,9 +185,4 @@ void FileSearchEngine::cancel(int msecs /*= -1*/)
 bool FileSearchEngine::isCanceled() const
 {
     return m_bIsCanceled;
-}
-
-FileSearchEngine::Results FileSearchEngine::results() const
-{
-    return m_results;
 }

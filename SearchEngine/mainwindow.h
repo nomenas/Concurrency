@@ -18,7 +18,10 @@ public:
 
 private slots:
     void on_pushButton_clicked();
-    void on_btnCancel_clicked();
+
+    void onMatchFileFound(const QString& filepath);
+    void onFileSearchItemFound(const QString& filepath, const QVariant& result);
+    void onSearchDone();
 
 private:
     Ui::MainWindow *ui;
