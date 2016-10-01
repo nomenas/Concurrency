@@ -37,28 +37,29 @@ int main() {
     Queue queue;
     const auto epoch = std::chrono::steady_clock::now();
     const auto maxExecutionTime = 100000;
+    const auto elapsedTime = [&epoch](){
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - epoch).count();
+    };
 
     std::thread thread1([&]() {
-        while (1) {
-            const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - epoch).count();
-            queue.push(elapsedTime);
+        while (true) {
+            queue.push(elapsedTime());
             std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-            if (elapsedTime > maxExecutionTime) break;
+            if (elapsedTime() > maxExecutionTime) break;
         }
     });
     std::thread thread2([&]() {
-        while (1) {
-            const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - epoch).count();
-
+        while (true) {
             std::cout << queue.pop(1500) << std::endl;
-            if (elapsedTime > maxExecutionTime) break;
+            if (elapsedTime() > maxExecutionTime) break;
         }
     });
 
     thread1.join();
     thread2.join();
+
+    std::unique_ptr<char[]> test(new char[300]);
 
     return 0;
 }
