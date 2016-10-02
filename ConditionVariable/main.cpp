@@ -7,12 +7,12 @@ class Queue
 {
 public:
     void push(int value) {
-        std::unique_lock<std::mutex> lock(m_mutex);
+        std::unique_lock<std::mutex> lock{m_mutex};
         m_container.push(value);
     }
 
     int pop(long ms) {
-        std::unique_lock<std::mutex> lock(m_mutex);
+        std::unique_lock<std::mutex> lock{m_mutex};
 
         if (m_container.empty()) {
             m_conditional.wait_for(lock, std::chrono::milliseconds(ms), [&](){return !m_container.empty();});
@@ -42,24 +42,26 @@ int main() {
                 std::chrono::steady_clock::now() - epoch).count();
     };
 
-    std::thread thread1([&]() {
-        while (true) {
-            queue.push(elapsedTime());
-            std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-            if (elapsedTime() > maxExecutionTime) break;
+    std::thread thread1 {
+        [&]() {
+            while (true) {
+                queue.push(elapsedTime());
+                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                if (elapsedTime() > maxExecutionTime) break;
+            }
         }
-    });
-    std::thread thread2([&]() {
-        while (true) {
-            std::cout << queue.pop(1500) << std::endl;
-            if (elapsedTime() > maxExecutionTime) break;
+    };
+    std::thread thread2 {
+        [&]() {
+            while (true) {
+                std::cout << queue.pop(1500) << std::endl;
+                if (elapsedTime() > maxExecutionTime) break;
+            }
         }
-    });
+    };
 
     thread1.join();
     thread2.join();
-
-    std::unique_ptr<char[]> test(new char[300]);
 
     return 0;
 }
