@@ -19,7 +19,7 @@ public:
         _thread->join();
     }
 
-        const std::vector<int>& result() const {
+    const std::vector<int>& items() const {
         return _result;
     }
 
@@ -90,9 +90,9 @@ public:
         create_task<SingleTask>(_value, [this](SingleTask* task){
             _counter = 0;
             _agregate_result = 0;
-            _expected_results = task->result().size();
+            _expected_results = task->items().size();
 
-            for (auto item : task->result()) {
+            for (auto item : task->items()) {
                 create_task<ParallelTask>(item, [this](ParallelTask* task) {
                     ++_counter;
                     _agregate_result += task->result();
@@ -105,7 +105,7 @@ public:
         }).run();
     }
 
-    int result() const {
+    int sum() const {
         return _agregate_result;
     }
 

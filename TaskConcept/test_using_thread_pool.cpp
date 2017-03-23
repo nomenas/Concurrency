@@ -20,9 +20,9 @@ int main() {
     ThreadPool::globalInstance().execute(&task3);
     task1_done.get_future().wait();
     task2_done.get_future().wait();
-    std::cout << "task1 result size: " << task1.result().size() << std::endl;
-    std::cout << "task2 result: " << task2.result() << std::endl;
-    std::cout << "task3 result: " << task3.result() << std::endl;
+    std::cout << "task1 result size: " << task1.items().size() << std::endl;
+    std::cout << "task2 result: " << task2.sum() << std::endl;
+    std::cout << "task3 result: " << task3.sum() << std::endl;
 
     return 0;
 }

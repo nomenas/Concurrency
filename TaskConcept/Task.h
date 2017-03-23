@@ -36,10 +36,9 @@ public:
     }
 
     // run task and wait for results
-    template <typename T = Task>
-    T& wait() {
+    Task& wait() {
         _promise.get_future().wait();
-        return *static_cast<T*>(this);
+        return *this;
     }
 
     // cancel tasks
@@ -57,6 +56,11 @@ public:
 
     bool is_canceled() const {
         return _canceled;
+    }
+
+    template <typename T>
+    const T& get_results() const {
+        return *static_cast<const T*>(this);
     }
 
 protected:
