@@ -17,30 +17,27 @@ class Task {
 public:
     using Callback = std::function<void(Task*)>;
 
+    explicit Task(Callback callback) : _callback(std::move(callback)) {}
+
     virtual ~Task() {
         cancel();
     }
 
     // run task and provide callback that would be called when tasks finishes
-    void run(Callback callback) {
-        if (_executor) {
-            _executor->execute(this, callback);
+    Task& run(bool force_synchronous_mode = false) {
+        if (_executor && !force_synchronous_mode) {
+            _executor->execute(this);
         } else {
-            (*this)(callback);
+            execute();
         }
-    }
 
-    // run task and continue without waiting for results
-    void run() {
-        run(Callback());
+        return *this;
     }
 
     // run task and wait for results
     template <typename T = Task>
-    T& run_and_wait() {
-        std::promise<void> promise;
-        (*this)([&promise](Task*){promise.set_value();});
-        promise.get_future().wait();
+    T& wait() {
+        _promise.get_future().wait();
         return *static_cast<T*>(this);
     }
 
@@ -61,20 +58,30 @@ public:
         return _canceled;
     }
 
-    virtual void operator()(Callback callback) = 0;
-
 protected:
+
+    virtual void execute() = 0;
 
     template<typename T, typename... Args>
     Task& create_task(Args... args) {
         std::unique_ptr<T> sub_task{new T{args...}};
+        sub_task->set_executor(_executor);
         Task& return_value = *sub_task;
         _sub_tasks.push_back(std::move(sub_task));
         return return_value;
-    };
+    }
+
+    void mark_as_done() {
+        _promise.set_value();
+        if (_callback) {
+            _callback(this);
+        }
+    }
 
 private:
     bool _canceled = false;
+    Callback _callback;
+    std::promise<void> _promise;
     std::vector<std::unique_ptr<Task>> _sub_tasks;
     TaskExecutor* _executor = nullptr;
 };

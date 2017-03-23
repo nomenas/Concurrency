@@ -11,16 +11,18 @@
 int main() {
     std::promise<void> task1_done;
     std::promise<void> task2_done;
-    CompoundTask task1{5};
-    CompoundTask task2{10};
+    SingleTask task1{15};
+    CompoundTask task2{5, [&task1_done](Task*){task1_done.set_value();}};
+    CompoundTask task3{10, [&task2_done](Task*){task2_done.set_value();}};
 
-    ThreadPool pool{5};
-    pool.execute(&task1, [&task1_done](Task*){task1_done.set_value();});
-    pool.execute(&task2, [&task2_done](Task*){task2_done.set_value();});
+    ThreadPool::globalInstance().execute(&task1);
+    ThreadPool::globalInstance().execute(&task2);
+    ThreadPool::globalInstance().execute(&task3);
     task1_done.get_future().wait();
     task2_done.get_future().wait();
-    std::cout << "task1 result: " << task1.result() << std::endl;
+    std::cout << "task1 result size: " << task1.result().size() << std::endl;
     std::cout << "task2 result: " << task2.result() << std::endl;
+    std::cout << "task3 result: " << task3.result() << std::endl;
 
     return 0;
 }

@@ -12,8 +12,13 @@
 
 class ThreadPool : public TaskExecutor {
 public:
-    ThreadPool(int number_of_threads = 1)
-            : _number_of_threads(1) {
+    static ThreadPool& globalInstance() {
+        static ThreadPool _instance;
+        return _instance;
+    }
+
+    ThreadPool(int number_of_threads = 4)
+            : _number_of_threads(number_of_threads) {
         for (int i = 0; i < _number_of_threads; ++i) {
             _threads.push_back(std::thread(std::bind(&ThreadPool::event_loop, this)));
         }
@@ -32,9 +37,9 @@ public:
         return *this;
     }
 
-    void execute(Task* task, Callback callback) override {
+    void execute(Task* task) override {
         task->set_executor(this);
-        execute([task, callback](){(*task)(callback);});
+        execute([task](){task->run(true);});
     }
 
     void cancel(Task* task) override {
@@ -49,21 +54,29 @@ public:
 protected:
     void event_loop() {
         while (!_stopped) {
-
             if (_tasks.empty()) {
                 std::unique_lock<std::mutex> lock(_tasks_mutex);
                 _tasks_condition.wait(lock);
             }
 
-            {
-                std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
+            auto function = pop_first();
 
-                if (_tasks.size()) {
-                    _tasks.front()();
-                    _tasks.pop();
-                }
+            if (function) {
+                function();
             }
         }
+    }
+
+    std::function<void()> pop_first() {
+        std::function<void()> return_value;
+        std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
+
+        if (_tasks.size()) {
+            return_value = _tasks.front();
+            _tasks.pop();
+        }
+
+        return return_value;
     }
 
 private:

@@ -9,7 +9,7 @@
 
 class SingleTask : public Task {
 public:
-    SingleTask(int elements) : _elements(elements) {
+    SingleTask(int elements, Callback callback = Callback()) : Task(callback), _elements(elements) {
 
     }
 
@@ -17,14 +17,13 @@ public:
         _thread->join();
     }
 
-    const std::vector<int>& result() const {
+        const std::vector<int>& result() const {
         return _result;
     }
 
 protected:
-    void operator()(Callback callback) override {
-        _callback = callback;
-        _thread.reset(new std::thread([this, callback](){
+    void execute() override {
+        _thread.reset(new std::thread([this](){
             handler();
         }));
     }
@@ -33,10 +32,9 @@ private:
     void handler() {
         _result.resize(_elements);
         std::iota(_result.begin(), _result.end(), 0);
-        _callback(this);
+        mark_as_done();
     }
 
-    Callback _callback;
     int _elements = 0;
     std::vector<int> _result;
     std::unique_ptr<std::thread> _thread;
@@ -44,7 +42,7 @@ private:
 
 class ParallelTask : public Task {
 public:
-    ParallelTask(int value) : _value(value) {
+    ParallelTask(int value, Callback callback = Callback()) : Task(callback), _value(value) {
 
     }
 
@@ -52,9 +50,8 @@ public:
         _thread->join();
     }
 
-    void operator()(Callback callback) override {
-        _callback = std::move(callback);
-        _thread.reset(new std::thread([this, callback](){
+    void execute() override {
+        _thread.reset(new std::thread([this](){
             handler();
         }));
     }
@@ -70,10 +67,9 @@ public:
 private:
     void handler() {
         _result = _value * 2;
-        _callback(this);
+        mark_as_done();
     }
 
-    Callback _callback;
     int _value = 0;
     int _result = 0;
     std::unique_ptr<std::thread> _thread;
@@ -81,11 +77,11 @@ private:
 
 class CompoundTask : public Task {
 public:
-    CompoundTask(int value) : _value(value) {}
+    CompoundTask(int value, Callback callback = Callback()) : Task(callback), _value(value) {}
 
-    void operator()(Callback callback) override {
+    void execute() override {
 
-        create_task<SingleTask>(_value).run([this, callback](Task* task){
+        create_task<SingleTask>(_value, [this](Task* task){
             SingleTask* single_task = static_cast<SingleTask*>(task);
 
             _counter = 0;
@@ -93,16 +89,16 @@ public:
             _expected_results = single_task->result().size();
 
             for (auto item : single_task->result()) {
-                create_task<ParallelTask>(item).run([this, callback](Task* task) {
+                create_task<ParallelTask>(item, [this](Task* task) {
                     ++_counter;
                     _agregate_result += static_cast<ParallelTask*>(task)->result();
 
                     if (_counter == _expected_results) {
-                        callback(this);
+                        mark_as_done();
                     }
-                });
+                }).run();
             }
-        });
+        }).run();
     }
 
     int result() const {
