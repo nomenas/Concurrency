@@ -15,9 +15,10 @@
 
 class Task {
 public:
-    using Callback = std::function<void(Task*)>;
+    template <typename T>
+    using Callback = std::function<void(T*)>;
 
-    explicit Task(Callback callback) : _callback(std::move(callback)) {}
+    explicit Task(Callback<Task> callback) : _callback(std::move(callback)) {}
 
     virtual ~Task() {
         cancel();
@@ -80,10 +81,15 @@ protected:
 
 private:
     bool _canceled = false;
-    Callback _callback;
+    Callback<Task> _callback;
     std::promise<void> _promise;
     std::vector<std::unique_ptr<Task>> _sub_tasks;
     TaskExecutor* _executor = nullptr;
 };
+
+template <typename T>
+Task::Callback<Task> create_task_callback(Task::Callback<T> callback) {
+    return [callback](Task* task){if (callback) {callback(static_cast<T*>(task));}};
+}
 
 #endif //TASKCONCEPT_TASK_H

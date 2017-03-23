@@ -9,7 +9,9 @@
 
 class SingleTask : public Task {
 public:
-    SingleTask(int elements, Callback callback = Callback()) : Task(callback), _elements(elements) {
+    SingleTask(int elements, Callback<SingleTask> callback = Callback<SingleTask>())
+            : Task(create_task_callback(callback))
+            , _elements(elements) {
 
     }
 
@@ -42,7 +44,9 @@ private:
 
 class ParallelTask : public Task {
 public:
-    ParallelTask(int value, Callback callback = Callback()) : Task(callback), _value(value) {
+    ParallelTask(int value, Callback<ParallelTask> callback = Callback<ParallelTask>())
+            : Task(create_task_callback(callback))
+            , _value(value) {
 
     }
 
@@ -77,21 +81,21 @@ private:
 
 class CompoundTask : public Task {
 public:
-    CompoundTask(int value, Callback callback = Callback()) : Task(callback), _value(value) {}
+    CompoundTask(int value, Callback<CompoundTask> callback = Callback<CompoundTask>())
+            : Task(create_task_callback(callback))
+            , _value(value) {}
 
     void execute() override {
 
-        create_task<SingleTask>(_value, [this](Task* task){
-            SingleTask* single_task = static_cast<SingleTask*>(task);
-
+        create_task<SingleTask>(_value, [this](SingleTask* task){
             _counter = 0;
             _agregate_result = 0;
-            _expected_results = single_task->result().size();
+            _expected_results = task->result().size();
 
-            for (auto item : single_task->result()) {
-                create_task<ParallelTask>(item, [this](Task* task) {
+            for (auto item : task->result()) {
+                create_task<ParallelTask>(item, [this](ParallelTask* task) {
                     ++_counter;
-                    _agregate_result += static_cast<ParallelTask*>(task)->result();
+                    _agregate_result += task->result();
 
                     if (_counter == _expected_results) {
                         mark_as_done();
