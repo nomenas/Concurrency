@@ -11,7 +11,7 @@ class TaskExecutor {
 public:
     using Callback = std::function<void(Task*)>;
 
-    virtual void run(Task* task, Callback callback) = 0;
+    virtual void execute(Task* task, Callback callback) = 0;
     virtual void cancel(Task* task) = 0;
 };
 

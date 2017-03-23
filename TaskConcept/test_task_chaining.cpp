@@ -12,7 +12,7 @@ class exec {
 public:
     exec(Task& task) {
         _recived_callbacks = 0;
-        _pool.run(&task, std::bind(&exec::call_next, this, 0));
+        _pool.execute(&task, std::bind(&exec::call_next, this, 0));
     }
 
     ~exec() {
@@ -31,7 +31,7 @@ private:
     void call_next(int index) {
         ++_recived_callbacks;
         if (_tasks.size() > index) {
-            _pool.run(_tasks[index], std::bind(&exec::call_next, this, index + 1));
+            _pool.execute(_tasks[index], std::bind(&exec::call_next, this, index + 1));
         } else {
             _done = true;
             _wait_for_done_condition.notify_all();

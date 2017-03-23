@@ -22,7 +22,7 @@ public:
     }
 
 protected:
-    void execute(Callback callback) override {
+    void operator()(Callback callback) override {
         _callback = callback;
         _thread.reset(new std::thread([this, callback](){
             handler();
@@ -52,7 +52,7 @@ public:
         _thread->join();
     }
 
-    void execute(Callback callback) override {
+    void operator()(Callback callback) override {
         _callback = std::move(callback);
         _thread.reset(new std::thread([this, callback](){
             handler();
@@ -83,9 +83,9 @@ class CompoundTask : public Task {
 public:
     CompoundTask(int value) : _value(value) {}
 
-    void execute(Callback callback) override {
+    void operator()(Callback callback) override {
 
-        task<SingleTask>(_value).run([this, callback](Task* task){
+        create_task<SingleTask>(_value).run([this, callback](Task* task){
             SingleTask* single_task = static_cast<SingleTask*>(task);
 
             _counter = 0;
@@ -93,7 +93,7 @@ public:
             _expected_results = single_task->result().size();
 
             for (auto item : single_task->result()) {
-                this->task<ParallelTask>(item).run([this, callback](Task* task) {
+                create_task<ParallelTask>(item).run([this, callback](Task* task) {
                     ++_counter;
                     _agregate_result += static_cast<ParallelTask*>(task)->result();
 

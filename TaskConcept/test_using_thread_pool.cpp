@@ -15,8 +15,8 @@ int main() {
     CompoundTask task2{10};
 
     ThreadPool pool{5};
-    pool.run(&task1, [&task1_done](Task*){task1_done.set_value();});
-    pool.run(&task2, [&task2_done](Task*){task2_done.set_value();});
+    pool.execute(&task1, [&task1_done](Task*){task1_done.set_value();});
+    pool.execute(&task2, [&task2_done](Task*){task2_done.set_value();});
     task1_done.get_future().wait();
     task2_done.get_future().wait();
     std::cout << "task1 result: " << task1.result() << std::endl;

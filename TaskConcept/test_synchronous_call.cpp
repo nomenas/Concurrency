@@ -3,6 +3,6 @@
 #include "ConcreteTasks.h"
 
 int main() {
-    std::cout << "result: " << CompoundTask(10).get_result<CompoundTask>().result() << std::endl;
+    std::cout << "result: " << CompoundTask(10).run_and_wait<CompoundTask>().result() << std::endl;
     return 0;
 }

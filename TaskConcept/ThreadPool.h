@@ -24,7 +24,7 @@ public:
         std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
     }
 
-    ThreadPool& run(std::function<void()> task) {
+    ThreadPool& execute(std::function<void()> task) {
         std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
         _tasks.push(std::move(task));
         _tasks_condition.notify_one();
@@ -32,8 +32,9 @@ public:
         return *this;
     }
 
-    void run(Task* task, Callback callback) override {
-        run([task, callback](){task->run(callback);});
+    void execute(Task* task, Callback callback) override {
+        task->set_executor(this);
+        execute([task, callback](){(*task)(callback);});
     }
 
     void cancel(Task* task) override {
