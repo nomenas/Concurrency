@@ -3,5 +3,6 @@ project(TaskConcept)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES test_synchronous_call.cpp)
-add_executable(TaskConcept ${SOURCE_FILES})
+add_executable(SynchronousCallTest test_synchronous_call.cpp)
+add_executable(ThreadPoolTest test_using_thread_pool.cpp)
+add_executable(TaskChaining test_task_chaining.cpp)

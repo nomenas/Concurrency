@@ -14,6 +14,8 @@
 #include <utility>
 
 class Task {
+    friend class TaskExecutor;
+
 public:
     using Callback = std::function<void(Task*)>;
 
@@ -21,8 +23,21 @@ public:
         cancel();
     }
 
-    virtual void execute(Callback callback) = 0;
+    // run task and provide callback that would be called when tasks finishes
+    void run(Callback callback) {
+        if (_executor) {
+            _executor->run(this, callback);
+        } else {
+            execute(callback);
+        }
+    }
 
+    // run task and continue without waiting for results
+    void run() {
+        run(Callback());
+    }
+
+    // cancel tasks
     virtual void cancel() {
         _canceled = true;
 
@@ -31,6 +46,7 @@ public:
         }
     }
 
+    // run task and wait for results
     template <typename T>
     T& get_result() {
         std::promise<void> promise;
@@ -49,17 +65,13 @@ public:
     }
 
 protected:
+    virtual void execute(Callback callback) = 0;
 
     template<typename T, typename... Args>
     Task& task(Args... args) {
         std::unique_ptr<T> sub_task{new T{args...}};
         Task& return_value = *sub_task;
         _sub_tasks.push_back(std::move(sub_task));
-
-        if (_executor) {
-            _executor->execute(sub_task.get());
-        }
-
         return return_value;
     };
 
