@@ -6,6 +6,7 @@
 #define TASKCONCEPT_TASK_H
 
 #include "TaskExecutor.h"
+#include "Utils.h"
 
 #include <functional>
 #include <vector>
@@ -37,11 +38,7 @@ public:
 
     // run task and wait for results
     Task& wait() {
-        try {
-            _promise.get_future().wait();
-        } catch (...) {
-            // do nothing
-        }
+        safe_call([this](){_promise.get_future().wait();});
         return *this;
     }
 
