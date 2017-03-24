@@ -3,7 +3,7 @@
 #include "ConcreteTasks.h"
 
 int main() {
-    std::cout << "result: " << CompoundTask(10).run().wait().get_results<CompoundTask>().sum() << std::endl;
+    std::cout << "result: " << CompoundTask(10).run().get_results<CompoundTask>().sum() << std::endl;
 
     CompoundTask task(20);
     task.run().wait();

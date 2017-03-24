@@ -37,7 +37,11 @@ public:
 
     // run task and wait for results
     Task& wait() {
-        _promise.get_future().wait();
+        try {
+            _promise.get_future().wait();
+        } catch (...) {
+            // do nothing
+        }
         return *this;
     }
 
@@ -59,8 +63,8 @@ public:
     }
 
     template <typename T>
-    const T& get_results() const {
-        return *static_cast<const T*>(this);
+    const T& get_results() {
+        return *static_cast<T*>(&wait());
     }
 
 protected:
