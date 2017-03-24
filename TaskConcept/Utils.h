@@ -7,16 +7,29 @@
 
 #include <functional>
 
-void safe_call(std::function<void()> function) {
+template <typename T>
+struct Trait {
+    static T default_value(){return T{};};
+};
+
+template <>
+struct Trait<void> {
+    static void default_value(){};
+};
+
+template <typename T>
+auto safe_call(T function) -> decltype(function()){
 #ifdef __EXCEPTIONS
     try {
-        function();
+        return function();
     } catch (...) {
         // do nothing
     }
 #else
-    function();
+    return function();
 #endif  // __EXCEPTIONS
+
+    return Trait<decltype(function())>::default_value();
 }
 
 #endif //TASKCONCEPT_UTILS_H

@@ -15,33 +15,63 @@ public:
 
     }
 
-    ~SingleTask() {
-        if (_thread) {
-            _thread->join();
-        }
-    }
-
     const std::vector<int>& items() const {
         return _result;
     }
 
 protected:
     void execute() override {
-        _thread.reset(new std::thread([this](){
+        // simulate asynchronous interruptible action that takes 2 sec
+        _thread.reset(new std::thread([this]() {
+            {
+                std::unique_lock<std::mutex> lock{_mutex};
+                _condition.wait_for(lock, std::chrono::seconds(1), [this]()-> bool{return _condition_done;});
+            }
+
             handler();
         }));
     }
 
+    void stop() override {
+        // simulate stop
+        {
+            {
+                std::lock_guard<std::mutex> lock{_mutex};
+                _condition_done = true;
+                _condition.notify_all();
+            }
+
+            if (_thread) {
+                _thread->join();
+            }
+        }
+
+        // in normal case this method should call just one api like:
+        // http_request->cancel();
+    }
+
 private:
     void handler() {
-        _result.resize(_elements);
-        std::iota(_result.begin(), _result.end(), 0);
+        // _condition_done is true just if task was not canceled i.e do this just when there are valid results
+        if (!_condition_done) {
+            _result.resize(_elements);
+            std::iota(_result.begin(), _result.end(), 0);
+        }
+
+        // process response ...
+
         mark_as_done();
     }
 
+    // members used for simulation
+    std::mutex _mutex;
+    std::condition_variable _condition;
+    bool _condition_done = false;
+    std::unique_ptr<std::thread> _thread;
+
+    // task members
     int _elements = 0;
     std::vector<int> _result;
-    std::unique_ptr<std::thread> _thread;
 };
 
 class ParallelTask : public Task {
@@ -50,12 +80,6 @@ public:
             : Task(create_task_callback(callback))
             , _value(value) {
 
-    }
-
-    ~ParallelTask() {
-        if (_thread) {
-            _thread->join();
-        }
     }
 
     int value() const {
@@ -68,20 +92,52 @@ public:
 
 protected:
     void execute() override {
-        _thread.reset(new std::thread([this](){
+        // simulate asynchronous interruptible action that takes 2 sec
+        _thread.reset(new std::thread([this]() {
+            {
+                std::unique_lock<std::mutex> lock{_mutex};
+                _condition.wait_for(lock, std::chrono::milliseconds(100), [this]()-> bool{return _condition_done;});
+            }
+
             handler();
         }));
     }
 
+    void stop() override {
+        // simulate stop
+        {
+            {
+                std::lock_guard<std::mutex> lock{_mutex};
+                _condition_done = true;
+                _condition.notify_all();
+            }
+
+            if (_thread) {
+                _thread->join();
+            }
+        }
+
+        // in normal case this method should call just one api like:
+        // http_request->cancel();
+    }
+
 private:
     void handler() {
-        _result = _value * 2;
+        if (!_condition_done) {
+            _result = _value * 2;
+        }
+
         mark_as_done();
     }
 
+    // members used for simulation
+    std::mutex _mutex;
+    std::condition_variable _condition;
+    bool _condition_done = false;
+    std::unique_ptr<std::thread> _thread;
+
     int _value = 0;
     int _result = 0;
-    std::unique_ptr<std::thread> _thread;
 };
 
 class CompoundTask : public Task {
@@ -110,6 +166,10 @@ protected:
                         mark_as_done();
                     }
                 }).run();
+            }
+
+            if (task->items().size() == 0) {
+                mark_as_done();
             }
         }).run();
     }
