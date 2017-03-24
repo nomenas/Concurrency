@@ -5,6 +5,8 @@
 #ifndef TASKCONCEPT_UTILS_H
 #define TASKCONCEPT_UTILS_H
 
+#include <functional>
+
 void safe_call(std::function<void()> function) {
 #ifdef __EXCEPTIONS
     try {

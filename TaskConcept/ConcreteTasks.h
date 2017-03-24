@@ -54,18 +54,19 @@ public:
         _thread->join();
     }
 
-    void execute() override {
-        _thread.reset(new std::thread([this](){
-            handler();
-        }));
-    }
-
     int value() const {
         return _value;
     }
 
     int result() const {
         return _result;
+    }
+
+protected:
+    void execute() override {
+        _thread.reset(new std::thread([this](){
+            handler();
+        }));
     }
 
 private:
@@ -85,8 +86,12 @@ public:
             : Task(create_task_callback(callback))
             , _value(value) {}
 
-    void execute() override {
+    int sum() const {
+        return _agregate_result;
+    }
 
+protected:
+    void execute() override {
         create_task<SingleTask>(_value, [this](SingleTask* task){
             _counter = 0;
             _agregate_result = 0;
@@ -103,10 +108,6 @@ public:
                 }).run();
             }
         }).run();
-    }
-
-    int sum() const {
-        return _agregate_result;
     }
 
 private:

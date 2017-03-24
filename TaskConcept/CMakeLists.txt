@@ -9,3 +9,5 @@ add_executable(ThreadPoolTest test_using_thread_pool.cpp)
 
 add_executable(SynchroniusNoExceptions test_synchronous_call.cpp)
 target_compile_options(SynchroniusNoExceptions PRIVATE "-fno-exceptions")
+
+add_executable(TestCompoundTaskCanceling test_compound_task_cancelling.cpp)
