@@ -22,7 +22,13 @@ public:
     explicit Task(Callback<Task> callback) : _callback(std::move(callback)) {}
 
     virtual ~Task() {
-        cancel();
+        if (_executor) {
+            _executor->cancel(this);
+        }
+    }
+
+    void set_executor(TaskExecutor* executor) {
+        _executor = executor;
     }
 
     // run task and provide callback that would be called when tasks finishes
@@ -40,23 +46,6 @@ public:
     Task& wait() {
         safe_call([this](){_promise.get_future().wait();});
         return *this;
-    }
-
-    // cancel tasks
-    virtual void cancel() {
-        _canceled = true;
-
-        if (_executor) {
-            _executor->cancel(this);
-        }
-    }
-
-    void set_executor(TaskExecutor* executor) {
-        _executor = executor;
-    }
-
-    bool is_canceled() const {
-        return _canceled;
     }
 
     template <typename T>
@@ -85,7 +74,6 @@ protected:
     }
 
 private:
-    bool _canceled = false;
     Callback<Task> _callback;
     std::promise<void> _promise;
     std::vector<std::unique_ptr<Task>> _sub_tasks;

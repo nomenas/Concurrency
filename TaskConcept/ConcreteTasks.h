@@ -16,7 +16,9 @@ public:
     }
 
     ~SingleTask() {
-        _thread->join();
+        if (_thread) {
+            _thread->join();
+        }
     }
 
     const std::vector<int>& items() const {
@@ -51,7 +53,9 @@ public:
     }
 
     ~ParallelTask() {
-        _thread->join();
+        if (_thread) {
+            _thread->join();
+        }
     }
 
     int value() const {
