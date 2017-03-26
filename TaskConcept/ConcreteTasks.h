@@ -152,26 +152,26 @@ public:
 
 protected:
     void execute() override {
-        create_task<SingleTask>(_value, [this](SingleTask* task){
-            _counter = 0;
+        run_task<SingleTask>(_value, [this](SingleTask* task){
             _agregate_result = 0;
-            _expected_results = task->items().size();
-
-            for (auto item : task->items()) {
-                create_task<ParallelTask>(item, [this](ParallelTask* task) {
-                    ++_counter;
-                    _agregate_result += task->result();
-
-                    if (_counter == _expected_results) {
-                        mark_as_done();
-                    }
-                }).run();
-            }
 
             if (task->items().size() == 0) {
                 mark_as_done();
+            } else {
+                _counter = 0;
+                _expected_results = task->items().size() - 1;
+
+                for (auto item : task->items()) {
+                    run_task<ParallelTask>(item, [this](ParallelTask* task) {
+                        _agregate_result += task->result();
+
+                        if (_counter.fetch_add(1) == _expected_results) {
+                            mark_as_done();
+                        }
+                    });
+                }
             }
-        }).run();
+        });
     }
 
 private:
@@ -179,6 +179,37 @@ private:
     std::atomic<int> _counter;
     int _expected_results = 0;
     std::atomic<int> _agregate_result;
+};
+
+class CompoundTaskV2 : public Task {
+public:
+    CompoundTaskV2(int value, Callback<CompoundTask> callback = Callback<CompoundTask>())
+            : Task(create_task_callback(callback))
+            , _value(value) {}
+
+    int sum() const {
+        return _agregate_result;
+    }
+
+protected:
+    void execute() override {
+        run_task<SingleTask>(_value, [this](SingleTask* task) {
+            if (task->items().size() == 0) {
+                mark_as_done();
+            } else {
+                run_tasks<ParallelTask>(task->items(), [this](const std::vector<ParallelTask*>& tasks) {
+                    for (auto task : tasks) {
+                        _agregate_result += task->result();
+                    }
+                    mark_as_done();
+                });
+            }
+        });
+    }
+
+private:
+    int _value = 0;
+    int _agregate_result = 0;
 };
 
 #endif //TASKCONCEPT_CONCRETETASKS_H

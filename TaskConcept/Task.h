@@ -90,7 +90,7 @@ protected:
 
     template<typename T, typename... Args>
     Task& create_task(Args... args) {
-        Holder<Task> sub_task{new T{args...}, [](Task* task){task->cancel(); delete task;}};
+        Holder<Task> sub_task{new T{std::forward<Args>(args)...}, [](Task* task){task->cancel(); delete task;}};
         sub_task->set_executor(_executor);
         Task& return_value = *sub_task;
         {
@@ -100,7 +100,39 @@ protected:
         return return_value;
     }
 
+    template<typename T, typename... Args>
+    Task& run_task(Args... args) {
+        return create_task<T>(std::forward<Args>(args)...).run();
+    }
+
+    template<typename T, typename Container>
+    void run_tasks(const Container& container, std::function<void(const std::vector<T*>&)> callback) {
+        _handled_results_counter = 0;
+
+        std::vector<T*>* tasks = new std::vector<T*>();
+        for (const auto& item : container) {
+            tasks->push_back(static_cast<T*>(&run_task<T>(item, [this, container, callback, tasks](Task* task) {
+                if (_handled_results_counter.fetch_add(1) == container.size() - 1) {
+                    {
+                        std::lock_guard<std::mutex> lock{_sub_tasks_mutex};
+                        tasks->erase(std::remove_if(tasks->begin(), tasks->end(), [this](T* task) -> bool {
+                            return _sub_tasks.end() == std::find_if(_sub_tasks.begin(), _sub_tasks.end(), [task](const Holder<Task>& holder) -> bool {
+                                return holder.get() == task;
+                            });
+                        }), tasks->end());
+                    }
+
+                    callback(*tasks);
+                    delete tasks;
+                }
+            })));
+        }
+    }
+
 private:
+    std::atomic<int> _handled_results_counter;
+    int _expected_results = 0;
+
     Callback<Task> _callback;
     bool _is_done = false;
     std::promise<void> _promise;
@@ -116,7 +148,14 @@ Task::Callback<Task> create_task_callback(Task::Callback<T> callback) {
 
 template<typename T, typename... Args>
 Holder<T> create_task(Args... args) {
-    return Holder<T>{new T{args...}, [](Task* task){task->cancel(); delete task;}};
+    return Holder<T>{new T{std::forward<Args>(args)...}, [](Task* task){task->cancel(); delete task;}};
+}
+
+template<typename T, typename... Args>
+Holder<T> run_task(Args... args) {
+    auto task = create_task<T>(std::forward<Args>(args)...);
+    task->run();
+    return task;
 }
 
 #endif //TASKCONCEPT_TASK_H

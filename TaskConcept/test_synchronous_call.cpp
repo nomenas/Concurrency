@@ -8,6 +8,16 @@ int main() {
         std::cout << "result: " << create_task<CompoundTask>(10)->run().get_results<CompoundTask>().sum() << std::endl;
     }
 
+    // using run_task api
+    {
+        std::cout << "result: " << run_task<CompoundTask>(15)->get_results<CompoundTask>().sum() << std::endl;
+    }
+
+    // using run_task api CompandTaskV2
+    {
+        std::cout << "result: " << run_task<CompoundTaskV2>(15)->get_results<CompoundTaskV2>().sum() << std::endl;
+    }
+
     // wait to finish
     {
         auto task = create_task<CompoundTask>(20);
