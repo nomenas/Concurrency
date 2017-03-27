@@ -13,6 +13,8 @@ public:
     TaskExecutor();
     ~TaskExecutor();
 
+    void stop();
+
 protected:
 
     class Executor {

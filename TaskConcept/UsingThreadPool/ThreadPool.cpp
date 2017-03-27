@@ -9,6 +9,12 @@ ThreadPool& ThreadPool::globalInstance() {
     return _instance;
 }
 
+ThreadPool::ThreadPool(ThreadPool& thread_pool, int number_of_threads) : _number_of_reserved_threads(number_of_threads) {
+    for (int i = 0; i < number_of_threads; ++i) {
+        thread_pool.execute(std::bind(&ThreadPool::event_loop, this));
+    }
+}
+
 ThreadPool::ThreadPool(int number_of_threads /* = 4*/) {
     for (int i = 0; i < number_of_threads; ++i) {
         _threads.push_back(std::thread(std::bind(&ThreadPool::event_loop, this)));
@@ -17,11 +23,10 @@ ThreadPool::ThreadPool(int number_of_threads /* = 4*/) {
 
 ThreadPool::~ThreadPool() {
     stop();
-    std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
 }
 
 ThreadPool& ThreadPool::execute(std::function<void()> task) {
-    _tasks.push(std::move(task));
+    _tasks.push(task);
     std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
     _tasks_condition.notify_one();
 
@@ -31,6 +36,10 @@ ThreadPool& ThreadPool::execute(std::function<void()> task) {
 void ThreadPool::stop() {
     _stopped = true;
     _tasks_condition.notify_all();
+
+    std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
+    std::unique_lock<std::mutex> lock{_finish_thread_mutex};
+    _finish_thread_condition.wait(lock, [this]()-> bool{return finished_threads == _number_of_reserved_threads;});
 }
 
 void ThreadPool::event_loop() {
@@ -40,6 +49,12 @@ void ThreadPool::event_loop() {
         if (function) {
             function();
         }
+    }
+
+    {
+        std::unique_lock<std::mutex> lock{_finish_thread_mutex};
+        ++finished_threads;
+        _finish_thread_condition.notify_all();
     }
 }
 

@@ -90,6 +90,10 @@ class DiscoverBridges : public TaskExecutor {
 public:
     using Callback = std::function<void(const std::vector<std::string>&)>;
 
+    ~DiscoverBridges() {
+        stop();
+    }
+
     void execute(Callback callback) {
         create_task<UPNPSearchTask>().execute([this, callback](Task* task) {
             auto search_task = static_cast<UPNPSearchTask*>(task);
@@ -97,7 +101,7 @@ public:
 
             for (const auto& ip : search_task->possible_ip_addresses()) {
                 create_task<CheckIPTask>(ip).execute([this, callback](Task* task) {
-                    auto check_ip_task = dynamic_cast<CheckIPTask*>(task);
+                    auto check_ip_task = static_cast<CheckIPTask*>(task);
                     if (check_ip_task->is_bridge()) {
                         _avalible_bridges.push_back(check_ip_task->ip());
                     }
@@ -108,10 +112,6 @@ public:
                 });
             }
         });
-    }
-
-    const std::vector<std::string>& avalible_bridges() const {
-        return _avalible_bridges;
     }
 
 private:

@@ -12,7 +12,7 @@ class ThreadPool {
 public:
     static ThreadPool& globalInstance();
 
-    ThreadPool(ThreadPool& thread_pool, int number_of_reserverd_threads);
+    ThreadPool(ThreadPool& thread_pool, int number_of_threads);
     ThreadPool(int number_of_threads = 4);
     ~ThreadPool();
 
@@ -29,6 +29,10 @@ private:
     std::queue<std::function<void()>> _tasks;
     std::mutex _tasks_mutex;
     std::condition_variable _tasks_condition;
+    const int _number_of_reserved_threads = 0;
+    int finished_threads = 0;
+    std::mutex _finish_thread_mutex;
+    std::condition_variable _finish_thread_condition;
 };
 
 #endif //TASKCONCEPT_THREADPOOL_H
