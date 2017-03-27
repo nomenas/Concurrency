@@ -6,7 +6,6 @@
 #define TASKCONCEPT_TASK_H
 
 #include "TaskExecutor.h"
-#include "Utils.h"
 
 #include <functional>
 #include <vector>
@@ -47,7 +46,8 @@ public:
 
     // run task and wait for results
     Task& wait() {
-        safe_call([this](){_promise.get_future().wait();});
+        std::unique_lock<std::mutex> unique_lock{_done_mutex};
+        _done_condition.wait(unique_lock, [this]() -> bool{return _is_done;});
         return *this;
     }
 
@@ -80,12 +80,16 @@ protected:
     virtual void execute() = 0;
     virtual void stop() {};
 
-    void mark_as_done() {
+    void done() {
         if (_callback) {
             _callback(this);
         }
-        _promise.set_value();
-        _is_done = true;
+
+        {
+            std::lock_guard<std::mutex> lock_guard{_done_mutex};
+            _is_done = true;
+            _done_condition.notify_all();
+        }
     }
 
     template<typename T, typename... Args>
@@ -135,7 +139,8 @@ private:
 
     Callback<Task> _callback;
     bool _is_done = false;
-    std::promise<void> _promise;
+    std::mutex _done_mutex;
+    std::condition_variable _done_condition;
     std::mutex _sub_tasks_mutex;
     std::vector<Holder<Task>> _sub_tasks;
     TaskExecutor* _executor = nullptr;

@@ -60,7 +60,7 @@ private:
 
         // process response ...
 
-        mark_as_done();
+        done();
     }
 
     // members used for simulation
@@ -127,7 +127,7 @@ private:
             _result = _value * 2;
         }
 
-        mark_as_done();
+        done();
     }
 
     // members used for simulation
@@ -156,7 +156,7 @@ protected:
             _agregate_result = 0;
 
             if (task->items().size() == 0) {
-                mark_as_done();
+                done();
             } else {
                 _counter = 0;
                 _expected_results = task->items().size() - 1;
@@ -166,7 +166,7 @@ protected:
                         _agregate_result += task->result();
 
                         if (_counter.fetch_add(1) == _expected_results) {
-                            mark_as_done();
+                            done();
                         }
                     });
                 }
@@ -195,13 +195,13 @@ protected:
     void execute() override {
         run_task<SingleTask>(_value, [this](SingleTask* task) {
             if (task->items().size() == 0) {
-                mark_as_done();
+                done();
             } else {
                 run_tasks<ParallelTask>(task->items(), [this](const std::vector<ParallelTask*>& tasks) {
                     for (auto task : tasks) {
                         _agregate_result += task->result();
                     }
-                    mark_as_done();
+                    done();
                 });
             }
         });
