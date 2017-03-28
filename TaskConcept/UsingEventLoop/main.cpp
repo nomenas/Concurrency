@@ -51,7 +51,6 @@ public:
 protected:
     void execute() override {
         SimulationTask::execute(500, [this](){
-            std::cout << "|" << std::endl;
             _is_bridge = _ip == "192.168.0.1" || _ip == "192.168.0.12";
             done();
         });
@@ -101,7 +100,6 @@ public:
 
             for (const auto& ip : search_task->possible_ip_addresses()) {
                 create_task<CheckIPTask>(ip).execute([this](Task* task) {
-                    std::cout << "-" << std::endl;
                     auto check_ip_task = static_cast<CheckIPTask*>(task);
                     if (check_ip_task->is_bridge()) {
                         _avalible_bridges.push_back(check_ip_task->ip());

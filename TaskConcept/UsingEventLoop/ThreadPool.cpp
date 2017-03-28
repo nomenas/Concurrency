@@ -26,8 +26,8 @@ ThreadPool::~ThreadPool() {
 }
 
 ThreadPool& ThreadPool::execute(std::function<void()> task) {
-    _tasks.push(task);
     std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
+    _tasks.push(task);
     _tasks_condition.notify_one();
 
     return *this;
