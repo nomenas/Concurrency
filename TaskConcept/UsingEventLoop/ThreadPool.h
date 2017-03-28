@@ -12,7 +12,7 @@ class ThreadPool {
 public:
     static ThreadPool& globalInstance();
 
-    ThreadPool(ThreadPool& thread_pool, int number_of_threads);
+    ThreadPool(ThreadPool& thread_pool, int number_of_threads = 1);
     ThreadPool(int number_of_threads = 4);
     ~ThreadPool();
 

@@ -3,7 +3,7 @@
 //
 #include "TaskExecutor.h"
 
-TaskExecutor::TaskExecutor() : _thread_pool{ThreadPool::globalInstance(), 1} {}
+TaskExecutor::TaskExecutor() : _thread_pool{std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1)} {}
 
 TaskExecutor::~TaskExecutor() {
     stop();
@@ -14,9 +14,5 @@ void TaskExecutor::stop() {
         task->stop();
     }
 
-    _thread_pool.stop();
-
-    for (auto& task : _tasks) {
-        task->wait();
-    }
+    _thread_pool->stop();
 }
