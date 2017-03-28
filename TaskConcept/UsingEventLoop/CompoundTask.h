@@ -8,10 +8,10 @@
 #include "ThreadPool.h"
 #include "Task.h"
 
-class TaskExecutor {
+class CompoundTask {
 public:
-    TaskExecutor();
-    ~TaskExecutor();
+    CompoundTask();
+    ~CompoundTask();
 
     void stop();
 

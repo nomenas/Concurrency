@@ -3,5 +3,5 @@ project(UsingThreadPool)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp ThreadPool.cpp TaskExecutor.cpp)
+set(SOURCE_FILES main.cpp ThreadPool.cpp CompoundTask.cpp)
 add_executable(UsingThreadPool ${SOURCE_FILES})

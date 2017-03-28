@@ -1,7 +1,7 @@
 #include <iostream>
 #include <future>
 
-#include "TaskExecutor.h"
+#include "CompoundTask.h"
 #include "Task.h"
 
 class SimulationTask : public Task {
@@ -86,7 +86,7 @@ private:
     std::vector<std::string> _possible_ip_address;
 };
 
-class DiscoverBridges : public TaskExecutor {
+class DiscoverBridges : public CompoundTask {
 public:
     using Callback = std::function<void(const std::vector<std::string>&)>;
 
