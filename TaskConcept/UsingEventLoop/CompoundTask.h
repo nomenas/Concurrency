@@ -10,11 +10,15 @@
 
 class CompoundTask {
 public:
+    using Callback = std::function<void(CompoundTask*)>;
+
     CompoundTask() : _thread_pool{std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1)} {}
 
-    ~CompoundTask() {
+    virtual ~CompoundTask() {
         stop();
     }
+
+    virtual void execute(Callback callback = Callback()) = 0;
 
     void stop() {
         for (auto& task : _tasks) {

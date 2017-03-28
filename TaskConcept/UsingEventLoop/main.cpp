@@ -88,9 +88,11 @@ private:
     std::vector<std::string> _possible_ip_address;
 };
 
-class DiscoverBridges : public CompoundTask {
+class BridgeDiscovery : public CompoundTask {
 public:
-    using Callback = std::function<void(const std::vector<std::string>&)>;
+    std::vector<std::string> avalible_bridges() const {
+        return _avalible_bridges;
+    }
 
     void execute(Callback callback) {
         create_task<UPNPSearchTask>().execute([this, callback](Task* task) {
@@ -105,7 +107,7 @@ public:
                     }
 
                     if (++_num_of_received_responses == _num_of_check_ip_requests) {
-                        callback(_avalible_bridges);
+                        callback(this);
                     }
                 });
             }
@@ -122,17 +124,18 @@ int main() {
     std::cout << "==== Test canceling ====" << std::endl;
     auto start = std::chrono::steady_clock::now();
     {
-        DiscoverBridges bridge_discovery;
-        bridge_discovery.execute([](const std::vector<std::string>& bridges){});
+        BridgeDiscovery bridge_discovery;
+        bridge_discovery.execute([](CompoundTask*){});
     }
     std::cout << "canceled for " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count() << " microseconds\n" << std::endl;
 
     std::cout << "==== Test normal execution ====" << std::endl;
     std::promise<void> wait_results;
-    DiscoverBridges bridge_discovery;
-    bridge_discovery.execute([&wait_results](const std::vector<std::string>& bridges){
+    BridgeDiscovery bridge_discovery;
+    bridge_discovery.execute([&wait_results](CompoundTask* task){
+        BridgeDiscovery* bridge_discovery = static_cast<BridgeDiscovery*>(task);
         std::cout << "Bridge discovery finished. The following bridges were found:" << std::endl;
-        for (const auto& bridge : bridges) {
+        for (const auto& bridge : bridge_discovery->avalible_bridges()) {
             std::cout << " " << bridge << std::endl;
         }
 
