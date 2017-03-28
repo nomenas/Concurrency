@@ -39,7 +39,7 @@ void ThreadPool::stop() {
 
     std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
     std::unique_lock<std::mutex> lock{_finish_thread_mutex};
-    _finish_thread_condition.wait(lock, [this]()-> bool{return finished_threads == _number_of_reserved_threads;});
+    _finish_thread_condition.wait(lock, [this]()-> bool{return finished_threads >= _number_of_reserved_threads;});
 }
 
 void ThreadPool::event_loop() {

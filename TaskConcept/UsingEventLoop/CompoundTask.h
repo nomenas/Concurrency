@@ -10,10 +10,19 @@
 
 class CompoundTask {
 public:
-    CompoundTask();
-    ~CompoundTask();
+    CompoundTask() : _thread_pool{std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1)} {}
 
-    void stop();
+    ~CompoundTask() {
+        stop();
+    }
+
+    void stop() {
+        for (auto& task : _tasks) {
+            task->stop();
+        }
+
+        _thread_pool->stop();
+    }
 
 protected:
 

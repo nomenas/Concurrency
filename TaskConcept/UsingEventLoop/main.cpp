@@ -90,10 +90,6 @@ class DiscoverBridges : public CompoundTask {
 public:
     using Callback = std::function<void(const std::vector<std::string>&)>;
 
-    ~DiscoverBridges() {
-        stop();
-    }
-
     void execute(Callback callback) {
         create_task<UPNPSearchTask>().execute([this, callback](Task* task) {
             auto search_task = static_cast<UPNPSearchTask*>(task);
