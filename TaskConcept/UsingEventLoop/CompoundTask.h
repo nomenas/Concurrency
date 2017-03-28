@@ -12,13 +12,19 @@ class CompoundTask {
 public:
     using Callback = std::function<void(CompoundTask*)>;
 
-    CompoundTask() : _thread_pool{std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1)} {}
+    CompoundTask()
+            : _thread_pool{std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1)} {
+    }
 
     virtual ~CompoundTask() {
         stop();
+        done();
     }
 
-    virtual void execute(Callback callback = Callback()) = 0;
+    void run(Callback callback = Callback()) {
+        _callback = callback;
+        execute();
+    }
 
     void stop() {
         for (auto& task : _tasks) {
@@ -29,6 +35,8 @@ public:
     }
 
 protected:
+
+    virtual void execute() = 0;
 
     class Executor {
     public:
@@ -54,10 +62,20 @@ protected:
         return Executor(_thread_pool, _tasks.back().get());
     }
 
+    void done() {
+        if (!_is_done.exchange(true)) {
+            if (_callback) {
+                _callback(this);
+            }
+        }
+    }
+
 private:
     std::mutex _tasks_mutex;
     std::vector<std::unique_ptr<Task>> _tasks;
     std::shared_ptr<ThreadPool> _thread_pool;
+    std::atomic<bool> _is_done{false};
+    Callback _callback;
 };
 
 #endif //WITHTASKEXECUTOR_TASKEXECUTOR_H

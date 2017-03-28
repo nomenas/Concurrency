@@ -94,20 +94,21 @@ public:
         return _avalible_bridges;
     }
 
-    void execute(Callback callback) {
-        create_task<UPNPSearchTask>().execute([this, callback](Task* task) {
+    void execute() {
+        create_task<UPNPSearchTask>().execute([this](Task* task) {
             auto search_task = static_cast<UPNPSearchTask*>(task);
             _num_of_check_ip_requests = search_task->possible_ip_addresses().size();
 
             for (const auto& ip : search_task->possible_ip_addresses()) {
-                create_task<CheckIPTask>(ip).execute([this, callback](Task* task) {
+                create_task<CheckIPTask>(ip).execute([this](Task* task) {
+                    std::cout << "-" << std::endl;
                     auto check_ip_task = static_cast<CheckIPTask*>(task);
                     if (check_ip_task->is_bridge()) {
                         _avalible_bridges.push_back(check_ip_task->ip());
                     }
 
                     if (++_num_of_received_responses == _num_of_check_ip_requests) {
-                        callback(this);
+                        done();
                     }
                 });
             }
@@ -125,14 +126,14 @@ int main() {
     auto start = std::chrono::steady_clock::now();
     {
         BridgeDiscovery bridge_discovery;
-        bridge_discovery.execute([](CompoundTask*){});
+        bridge_discovery.run();
     }
     std::cout << "canceled for " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count() << " microseconds\n" << std::endl;
 
     std::cout << "==== Test normal execution ====" << std::endl;
     std::promise<void> wait_results;
-    BridgeDiscovery bridge_discovery;
-    bridge_discovery.execute([&wait_results](CompoundTask* task){
+    BridgeDiscovery bridge_disovery;
+    bridge_disovery.run([&wait_results](CompoundTask* task){
         BridgeDiscovery* bridge_discovery = static_cast<BridgeDiscovery*>(task);
         std::cout << "Bridge discovery finished. The following bridges were found:" << std::endl;
         for (const auto& bridge : bridge_discovery->avalible_bridges()) {
