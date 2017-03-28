@@ -40,6 +40,15 @@ class CheckIPTask : public SimulationTask {
 public:
     CheckIPTask(const std::string& ip) : _ip(ip) {}
 
+    const std::string& ip() const {
+        return _ip;
+    }
+
+    bool is_bridge() const {
+        return _is_bridge;
+    }
+
+protected:
     void execute() override {
         SimulationTask::execute(500, [this](){
             std::cout << "|" << std::endl;
@@ -52,14 +61,6 @@ public:
         SimulationTask::stop();
     }
 
-    const std::string& ip() const {
-        return _ip;
-    }
-
-    bool is_bridge() const {
-        return _is_bridge;
-    }
-
 private:
     std::string _ip;
     bool _is_bridge = false;
@@ -67,6 +68,11 @@ private:
 
 class UPNPSearchTask : public SimulationTask {
 public:
+    const std::vector<std::string>& possible_ip_addresses() const {
+        return _possible_ip_address;
+    }
+
+protected:
     void execute() override {
         SimulationTask::execute(2000, [this](){
             _possible_ip_address = {"192.168.0.1", "192.168.0.11", "192.168.0.12", "192.168.0.31", "192.168.0.18"};
@@ -76,10 +82,6 @@ public:
 
     void stop() override {
         SimulationTask::stop();
-    }
-
-    const std::vector<std::string>& possible_ip_addresses() const {
-        return _possible_ip_address;
     }
 
 private:
