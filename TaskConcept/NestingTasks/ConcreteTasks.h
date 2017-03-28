@@ -181,9 +181,12 @@ private:
     std::atomic<int> _agregate_result;
 };
 
-class CompoundTaskV2 : public Task {
+using UPNPSearch = SingleTask;
+using CheckIP = ParallelTask;
+
+class BridgeDiscovery : public Task {
 public:
-    CompoundTaskV2(int value, Callback<CompoundTask> callback = Callback<CompoundTask>())
+    BridgeDiscovery(int value, Callback<CompoundTask> callback = Callback<CompoundTask>())
             : Task(create_task_callback(callback))
             , _value(value) {}
 
@@ -193,11 +196,11 @@ public:
 
 protected:
     void execute() override {
-        run_task<SingleTask>(_value, [this](SingleTask* task) {
+        run_task<UPNPSearch>(_value, [this](UPNPSearch* task) {
             if (task->items().size() == 0) {
                 done();
             } else {
-                run_tasks<ParallelTask>(task->items(), [this](const std::vector<ParallelTask*>& tasks) {
+                run_tasks<CheckIP>(task->items(), [this](const std::vector<CheckIP*>& tasks) {
                     for (auto task : tasks) {
                         _agregate_result += task->result();
                     }
