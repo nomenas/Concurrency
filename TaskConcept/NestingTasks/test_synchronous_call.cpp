@@ -15,7 +15,7 @@ int main() {
 
     // using run_task api CompandTaskV2
     {
-        std::cout << "result: " << run_task<CompoundTaskV2>(15)->get_results<CompoundTaskV2>().sum() << std::endl;
+        std::cout << "result: " << run_task<BridgeDiscovery>(15)->get_results<BridgeDiscovery>().sum() << std::endl;
     }
 
     // wait to finish

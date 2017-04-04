@@ -27,11 +27,18 @@ public:
     }
 
     void stop() {
-        for (auto& task : _tasks) {
-            task->stop();
-        }
+        std::vector<std::unique_ptr<Task>> active_tasks;
 
-        _thread_pool->stop();
+        _thread_pool->stop([&](){
+            {
+                std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
+                active_tasks = std::move(_tasks);
+            }
+
+            for (auto& task : active_tasks) {
+                task->stop();
+            }
+        });
     }
 
 protected:

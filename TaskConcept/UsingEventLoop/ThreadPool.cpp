@@ -33,9 +33,16 @@ ThreadPool& ThreadPool::execute(std::function<void()> task) {
     return *this;
 }
 
-void ThreadPool::stop() {
-    _stopped = true;
-    _tasks_condition.notify_all();
+void ThreadPool::stop(std::function<void()> cancelling_task /* = std::function<void()>() */) {
+    {
+        std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
+        _stopped = true;
+        _tasks_condition.notify_all();
+    }
+
+    if (cancelling_task) {
+        cancelling_task();
+    }
 
     std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
     std::unique_lock<std::mutex> lock{_finish_thread_mutex};
@@ -46,27 +53,25 @@ void ThreadPool::event_loop() {
     while (!_stopped) {
         auto function = pop_first();
 
-        if (function) {
+        if (function && !_stopped) {
             function();
         }
     }
 
-    {
-        std::unique_lock<std::mutex> lock{_finish_thread_mutex};
-        ++finished_threads;
-        _finish_thread_condition.notify_all();
-    }
+    std::unique_lock<std::mutex> lock{_finish_thread_mutex};
+    ++finished_threads;
+    _finish_thread_condition.notify_all();
 }
 
 std::function<void()> ThreadPool::pop_first() {
-    std::function<void()> return_value;
     std::unique_lock<std::mutex> lock{_tasks_mutex};
+    std::function<void()> return_value;
 
-    if (_tasks.empty()) {
+    if (!_stopped && _tasks.empty()) {
         _tasks_condition.wait(lock);
     }
 
-    if (_tasks.size()) {
+    if (!_stopped && _tasks.size()) {
         return_value = _tasks.front();
         _tasks.pop();
     }

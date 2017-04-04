@@ -17,7 +17,7 @@ public:
     ~ThreadPool();
 
     ThreadPool& execute(std::function<void()> task);
-    void stop();
+    void stop(std::function<void()> cancelling_task = std::function<void()>());
 
 protected:
     void event_loop();

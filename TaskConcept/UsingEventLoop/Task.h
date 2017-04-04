@@ -22,12 +22,15 @@ protected:
     virtual void stop() = 0;
 
     void done() {
-        if (_callback) {
-            _callback(this);
+        if (!_is_done.exchange(true)) {
+            if (_callback) {
+                _callback(this);
+            }
         }
     }
 
 private:
+    std::atomic<bool> _is_done{false};
     Callback _callback;
 };
 
