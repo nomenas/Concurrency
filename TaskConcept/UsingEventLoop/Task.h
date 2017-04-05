@@ -5,7 +5,7 @@
 #ifndef WITHTASKEXECUTOR_TASK_H
 #define WITHTASKEXECUTOR_TASK_H
 
-#include "ThreadPool.h"
+#include "ThreadPoolTaskExecutor.h"
 
 class Task {
 public:
@@ -16,9 +16,10 @@ public:
         done();
     }
 
+    template <typename Executor = ThreadPoolTaskExecutor<1>>
     void run(Callback callback = Callback()) {
-        if (!_thread_pool) {
-            _thread_pool = std::make_shared<ThreadPool>(ThreadPool::globalInstance(), 1);
+        if (!_task_executor) {
+            _task_executor = std::make_shared<Executor>();
         }
         _callback = callback;
         execute();
@@ -27,7 +28,7 @@ public:
     void cancel() {
         std::vector<std::shared_ptr<Task>> active_tasks;
 
-        _thread_pool->stop([&](){
+        _task_executor->stop([&](){
             {
                 std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
                 active_tasks = std::move(_tasks);
@@ -53,34 +54,34 @@ protected:
 
     class Executor {
     public:
-        Executor(std::shared_ptr<ThreadPool> thread_pool, std::shared_ptr<Task> task) : _thread_pool(thread_pool), _task(task) {};
+        Executor(std::shared_ptr<TaskExecutor> task_executor, std::shared_ptr<Task> task) : _task_executor(task_executor), _task(task) {};
 
         void execute(Callback callback) {
-            auto thread_pool = _thread_pool;
-            auto task_callback = [thread_pool, callback](Task* task) {
-                thread_pool->execute([callback, task](){callback(task);});
+            auto task_executor = _task_executor;
+            auto task_callback = [task_executor, callback](Task* task) {
+                task_executor->execute([callback, task](){callback(task);});
             };
             auto task = _task;
-            task->_thread_pool = thread_pool;
-            _thread_pool->execute([task, task_callback](){task->run(task_callback);});
+            task->_task_executor = task_executor;
+            task_executor->execute([task, task_callback](){task->run(task_callback);});
         }
     private:
         std::shared_ptr<Task> _task;
-        std::shared_ptr<ThreadPool> _thread_pool;
+        std::shared_ptr<TaskExecutor> _task_executor;
     };
 
     template<typename T, typename... Args>
     Executor create_task(Args... args) {
         std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
         _tasks.emplace_back(new T{std::forward<Args>(args)...});
-        return Executor(_thread_pool, _tasks.back());
+        return Executor(_task_executor, _tasks.back());
     }
 
 private:
     // child tasks
     std::mutex _tasks_mutex;
     std::vector<std::shared_ptr<Task>> _tasks;
-    std::shared_ptr<ThreadPool> _thread_pool;
+    std::shared_ptr<TaskExecutor> _task_executor;
 
     // callback
     std::atomic<bool> _is_done{false};

@@ -25,23 +25,21 @@ ThreadPool::~ThreadPool() {
     stop();
 }
 
-ThreadPool& ThreadPool::execute(std::function<void()> task) {
+void ThreadPool::execute(std::function<void()> task) {
     std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
     _tasks.push(task);
     _tasks_condition.notify_one();
-
-    return *this;
 }
 
-void ThreadPool::stop(std::function<void()> cancelling_task /* = std::function<void()>() */) {
+void ThreadPool::stop(std::function<void()> cancel_tasks /* = std::function<void()>() */) {
     {
         std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
         _stopped = true;
         _tasks_condition.notify_all();
     }
 
-    if (cancelling_task) {
-        cancelling_task();
+    if (cancel_tasks) {
+        cancel_tasks();
     }
 
     std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
