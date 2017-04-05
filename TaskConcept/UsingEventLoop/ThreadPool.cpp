@@ -25,13 +25,13 @@ ThreadPool::~ThreadPool() {
     stop();
 }
 
-void ThreadPool::execute(std::function<void()> task) {
+void ThreadPool::execute(Task task) {
     std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
     _tasks.push(task);
     _tasks_condition.notify_one();
 }
 
-void ThreadPool::stop(std::function<void()> cancel_tasks /* = std::function<void()>() */) {
+void ThreadPool::stop(Task cancel_tasks /* = Task() */) {
     {
         std::lock_guard<std::mutex> lock_guard{_tasks_mutex};
         _stopped = true;
@@ -61,9 +61,9 @@ void ThreadPool::event_loop() {
     _finish_thread_condition.notify_all();
 }
 
-std::function<void()> ThreadPool::pop_first() {
+ThreadPool::Task ThreadPool::pop_first() {
     std::unique_lock<std::mutex> lock{_tasks_mutex};
-    std::function<void()> return_value;
+    Task return_value;
 
     if (!_stopped && _tasks.empty()) {
         _tasks_condition.wait(lock);
