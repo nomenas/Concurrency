@@ -1,7 +1,6 @@
 #include <iostream>
 #include <future>
 
-#include "CompoundTask.h"
 #include "Task.h"
 
 class SimulationTask : public Task {
@@ -87,7 +86,7 @@ private:
     std::vector<std::string> _possible_ip_address;
 };
 
-class BridgeDiscovery : public CompoundTask {
+class BridgeDiscovery : public Task {
 public:
     std::vector<std::string> avalible_bridges() const {
         return _avalible_bridges;
@@ -131,7 +130,7 @@ int main() {
     std::cout << "==== Test normal execution ====" << std::endl;
     std::promise<void> wait_results;
     BridgeDiscovery bridge_disovery;
-    bridge_disovery.run([&wait_results](CompoundTask* task){
+    bridge_disovery.run([&wait_results](Task* task){
         BridgeDiscovery* bridge_discovery = static_cast<BridgeDiscovery*>(task);
         std::cout << "Bridge discovery finished. The following bridges were found:" << std::endl;
         for (const auto& bridge : bridge_discovery->avalible_bridges()) {
