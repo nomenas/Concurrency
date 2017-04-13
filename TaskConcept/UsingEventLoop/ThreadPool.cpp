@@ -4,20 +4,20 @@
 
 #include "ThreadPool.h"
 
-ThreadPool& ThreadPool::globalInstance() {
+ThreadPool& ThreadPool::global() {
     static ThreadPool _instance;
     return _instance;
 }
 
-ThreadPool::ThreadPool(ThreadPool& thread_pool, int number_of_threads) : _number_of_reserved_threads(number_of_threads) {
+ThreadPool::ThreadPool(ThreadPool& thread_pool, int number_of_threads)  {
     for (int i = 0; i < number_of_threads; ++i) {
-        thread_pool.execute(std::bind(&ThreadPool::event_loop, this));
+        thread_pool.execute(std::bind(&ThreadPool::event_loop, this, true));
     }
 }
 
 ThreadPool::ThreadPool(int number_of_threads /* = 4*/) {
     for (int i = 0; i < number_of_threads; ++i) {
-        _threads.push_back(std::thread(std::bind(&ThreadPool::event_loop, this)));
+        _threads.push_back(std::thread(std::bind(&ThreadPool::event_loop, this, false)));
     }
 }
 
@@ -43,11 +43,16 @@ void ThreadPool::stop(Task cancel_tasks /* = Task() */) {
     }
 
     std::for_each(_threads.begin(), _threads.end(), [](std::thread& thread) {thread.join();});
-    std::unique_lock<std::mutex> lock{_finish_thread_mutex};
-    _finish_thread_condition.wait(lock, [this]()-> bool{return finished_threads >= _number_of_reserved_threads;});
+    std::unique_lock<std::mutex> lock{_thread_managment_mutex};
+    _finish_thread_condition.wait(lock, [this]()-> bool{return _number_of_active_reused_threads == 0;});
 }
 
-void ThreadPool::event_loop() {
+void ThreadPool::event_loop(bool is_reused) {
+    if (is_reused) {
+        std::unique_lock<std::mutex> lock{_thread_managment_mutex};
+        ++_number_of_active_reused_threads;
+    }
+
     while (!_stopped) {
         auto function = pop_first();
 
@@ -56,9 +61,11 @@ void ThreadPool::event_loop() {
         }
     }
 
-    std::unique_lock<std::mutex> lock{_finish_thread_mutex};
-    ++finished_threads;
-    _finish_thread_condition.notify_all();
+    if (is_reused) {
+        std::unique_lock<std::mutex> lock{_thread_managment_mutex};
+        --_number_of_active_reused_threads;
+        _finish_thread_condition.notify_all();
+    }
 }
 
 ThreadPool::Task ThreadPool::pop_first() {

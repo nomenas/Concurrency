@@ -93,12 +93,12 @@ public:
     }
 
     void execute() {
-        create_task<UPNPSearchTask>().execute([this](Task* task) {
+        create_task<UPNPSearchTask>()->run([this](Task* task) {
             auto search_task = static_cast<UPNPSearchTask*>(task);
             _num_of_check_ip_requests = search_task->possible_ip_addresses().size();
 
             for (const auto& ip : search_task->possible_ip_addresses()) {
-                create_task<CheckIPTask>(ip).execute([this](Task* task) {
+                create_task<CheckIPTask>(ip)->run([this](Task* task) {
                     auto check_ip_task = static_cast<CheckIPTask*>(task);
                     if (check_ip_task->is_bridge()) {
                         _avalible_bridges.push_back(check_ip_task->ip());

@@ -7,11 +7,20 @@
 
 #include <functional>
 
+#include "ThreadPool.h"
+
 class TaskExecutor {
 public:
-    virtual ~TaskExecutor() = default;
+    void execute(std::function<void()> task) {
+        _thread_pool.execute(std::move(task));
+    }
 
-    virtual void execute(std::function<void()> task) = 0;
-    virtual void stop(std::function<void()> cancel_tasks = std::function<void()>()) = 0;
+    void stop(std::function<void()> cancel_tasks = std::function<void()>()) {
+        _thread_pool.stop(std::move(cancel_tasks));
+    }
+
+private:
+    ThreadPool _thread_pool{ThreadPool::global(), 1};
 };
+
 #endif //USINGTHREADPOOL_TASKEXECUTOR_H

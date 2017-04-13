@@ -11,7 +11,7 @@
 class ThreadPool {
 public:
     using Task = std::function<void()>;
-    static ThreadPool& globalInstance();
+    static ThreadPool& global();
 
     ThreadPool(ThreadPool& thread_pool, int number_of_threads = 1);
     ThreadPool(int number_of_threads = 4);
@@ -21,7 +21,7 @@ public:
     void stop(Task cancel_tasks = Task());
 
 protected:
-    void event_loop();
+    void event_loop(bool is_reused);
     std::function<void()> pop_first();
 
 private:
@@ -30,9 +30,8 @@ private:
     std::queue<Task> _tasks;
     std::mutex _tasks_mutex;
     std::condition_variable _tasks_condition;
-    const int _number_of_reserved_threads = 0;
-    int finished_threads = 0;
-    std::mutex _finish_thread_mutex;
+    int _number_of_active_reused_threads = 0;
+    std::mutex _thread_managment_mutex;
     std::condition_variable _finish_thread_condition;
 };
 
