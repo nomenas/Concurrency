@@ -60,7 +60,7 @@ public:
 
     void wait() {
         if (!_is_done) {
-            _callback_promise.get_future().wait();
+            _callback_promise->get_future().wait();
         }
     }
 
@@ -88,11 +88,12 @@ protected:
     virtual void stop() {}
 
     void done() {
+        auto shared_callback_promise = _callback_promise;
         if (!_is_done.exchange(true)) {
             if (_callback) {
                 _callback(this);
             }
-            _callback_promise.set_value();
+            shared_callback_promise->set_value();
         }
     }
 
@@ -117,7 +118,7 @@ private:
     std::atomic<bool> _is_run{false};
     std::atomic<bool> _is_done{false};
     std::atomic<bool> _is_canceled{false};
-    std::promise<void> _callback_promise;
+    std::shared_ptr<std::promise<void>> _callback_promise = std::make_shared<std::promise<void>>();
     Callback _callback;
 };
 
